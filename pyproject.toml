@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "rf-toolkit"
+version = "0.1.0"
+description = "A set of functions for quick RF calculations and analysis"
+authors = ["b"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "<3.13,>=3.11"
+numpy = "^1.26.0"
+matplotlib = "^3.8.0"
+mpl-smithchart = "^0.1.2"
+scikit-rf = "^0.29.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
