@@ -4,28 +4,36 @@ import skrf
 import cmath
 from mpl_smithchart import SmithAxes
 
-def S11(zl,z0):
-    return (zl - z0)/(zl + z0)
+# TODO: Filter calculations
+
+def
+
+def S11TE(eta1,eta2,thetai,thetat):
+    # NOTE: eta1 is the impedance of the tx material, and eta2 is the impedance of the entering material
+    return (eta2*numpy.cos(thetai) - eta1*numpy.cos(thetat))/(eta2*numpy.cos(thetai) + eta1*numpy.cos(thetat))
+
+def S11TM(eta1,eta2,thetai,thetat):
+    return (eta2*numpy.cos(thetat) - eta1*numpy.cos(thetai))/(eta2*numpy.cos(thetat) + eta1*numpy.cos(thetai))
 
 def dB(x):
     return 10*numpy.log(x)/numpy.log(10)
 
-def Zin(zl,z0,beta,l):
-    return z0 * (zl )
+def Zin(zl,z0,gamma,l):
+    return z0 * (zl + z0 * numpy.tanh(gamma*l))/(z0 + zl*numpy.tanh(gamma*l))
 
-def PlotSmtithZ(z):
+def PlotSmithZ(z):
     fig = matplotlib.pyplot.figure()
     ax = fig.add_subplot(111, projection='smith')
     ax.plot(z,datatype=SmithAxes.Z_PARAMETER)
     return fig
 
-def PlotSmtithS(s):
+def PlotSmithS(s):
     fig = matplotlib.pyplot.figure()
     ax = fig.add_subplot(111, projection='smith')
     ax.plot(s,datatype=SmithAxes.S_PARAMETER)
     return fig
 
-def PlotSmtithY(y):
+def PlotSmithY(y):
     fig = matplotlib.pyplot.figure()
     ax = fig.add_subplot(111, projection='smith')
     ax.plot(y,datatype=SmithAxes.S_PARAMETER)
@@ -38,6 +46,12 @@ def PlotS11db(f,s):
     ax2 = fig.add_subplot(212)
     ax2.plot(f,numpy.angle(s))
     return fig
+
+# TODO: working on implementing a transmission line that can calculate Zin based on loads. hope to expand to calculate shunts
+
+class TxLine:
+    def __init__(z0,l):
+        return
 
 class NetExt:
     def __init__(z0,f,data,datatype,name="GenNet"):
@@ -52,7 +66,7 @@ class NetExt:
     def S11Min(self):
         return self.net.s[numpy.where(self.net.f==resf),0,0]
 
-    def PlotSmithNetZ(self):
+    def PlotSmithZNet(self):
         fig = matplotlib.pyplot.figure()
         ax1 = fig.add_subplot(111, projection='smith')
         ax1.plot(self.net.z[:,0,0], datatype=SmithAxes.Z_PARAMETER)
@@ -61,7 +75,7 @@ class NetExt:
         matplotlib.pyplot.show(block=True)
         return
 
-    def PlotS11NetZ(self):
+    def PlotS11Net(self):
         fig = matplotlib.pyplot.figure()
         ax1 = fig.add_subplot(121)
         ax1.set_title("S11, Magnitude (dB)")
