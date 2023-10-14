@@ -4,8 +4,6 @@ import skrf
 import cmath
 from mpl_smithchart import SmithAxes
 
-# TODO: Filter calculations
-
 # NOTE: the material the wave is going into is 2 becaue it is *in-two*
 
 epsilon0 = 8.854 * 10 ** -12 # permittivity of free space
@@ -14,7 +12,7 @@ eta0 = numpy.sqrt(mu0/epsilon0)
 c = 1/numpy.sqrt(epsilon0*mu0)
 
 def WaveImpedance(epsilon,mu):
-    return sqrt(mu/epsilon)
+    return numpy.sqrt(mu/epsilon)
 
 def RefractiveIndex(eta):
     return eta0/eta
@@ -36,7 +34,7 @@ def PhaseVelocity(n):
     return c/n
 
 def PropagationConstant(phasevel,angfreq):
-    return j*(phasevel/angfreq)
+    return complex(0,(phasevel/angfreq))
 
 def AttenuationConstant(angfreq):
     return 0
@@ -50,6 +48,9 @@ def dB(x):
 def Zin(zl,z0,gamma,l):
     # NOTE: this function uses the full form of the equations. make sure to append j when dealing with lossless lines
     return z0 * (zl + z0 * numpy.tanh(gamma*l))/(z0 + zl*numpy.tanh(gamma*l))
+
+def Zl(zin,z0,gamma,l):
+    return (z0*z0*numpy.tanh(gamma*l) - zin*z0)/(zin*numpy.tanh(gamma*l) - z0)
 
 def PlotSmithZ(z,z0=50):
     fig = matplotlib.pyplot.figure()
@@ -77,38 +78,25 @@ def PlotS11db(f,s):
     ax2.plot(f,numpy.angle(s))
     return fig
 
-# TODO: working on implementing a transmission line that can calculate Zin based on loads. hope to expand to calculate shunts
+def CalcLength(z0,zin,zl,gamma):
+    return numpy.arctanh((z0*zl - zin*z0)/(zin*zl - z0**2))/gamma
 
-class TxLine:
-    def __init__(self,z0,length,load,freq):
-        self.z0 = z0
-        self.length = length
-        self.load = load
-        self.freq = freq
-        return
-    def TxGamma(self):
-        phasevel = PhaseVelocity(RefractiveIndex(self.z0))
-        self.gamma = Gamma(PropagationConstant(phasevel,2*numpy.pi*self.freq),AttenuationConstant(2*numpy.pi*self.freq))
-        return
-    def S11in(self):
-        return S11TEM(self.z0,self.load)*numpy.exp(-2*self.gamma*self.length)
-    def ZinLine(self):
-        return Zin(self.load,self.z0,self,self.gamma,self.length)
+def CalcGamma(z0,zin,zl,length):
+    return numpy.arctanh((z0&zl - zin*z0)/(zin*zl - z0**2))/length
 
-    
 class NetExt:
     def __init__(self,z0,f,data,datatype,name="GenNet",file=None):
         if datatype == "file":
             self.net=skrf.Network(file)
-        elif datatype == s:
+        elif datatype == "s":
             freq = skrf.Freqeuncy.from_f(f)
-            self.net=skrf.Network(frequency=freq,s=data,name=name)
-        elif datatype == z:
+            self.net=skrf.Network(z0=z0,frequency=freq,s=data,name=name)
+        elif datatype == "z":
             freq = skrf.Freqeuncy.from_f(f)
-            self.net=skrf.Network(frequency=freq,z=data,name=name)
-        elif datatype == y:
+            self.net=skrf.Network(z0=z0,frequency=freq,z=data,name=name)
+        elif datatype == "y":
             freq = skrf.Freqeuncy.from_f(f)
-            self.net=skrf.Network(frequency=freq,y=data,name=name)
+            self.net=skrf.Network(z0=z0,frequency=freq,y=data,name=name)
         self.resonantf()
         return
 
@@ -145,3 +133,41 @@ class NetExt:
         fig.tight_layout
         matplotlib.pyplot.show(block=True)
         return
+
+    def PlotS21Net(self):
+        fig = matplotlib.pyplot.figure()
+        ax1 = fig.add_subplot(121)
+        ax1.set_title(str(self.net.name) + " S21, Magnitude (dB)")
+        ax1.plot(self.net.f, dB(numpy.abs(self.net.s[:,1,0])),label=("S21 Magnitude, " + str(self.net.name)))
+        ax1.plot(self.resf,dB(numpy.abs(self.S11Min())),'X', markersize=10, label=("Resonance"))
+        ax1.legend()
+        ax2=fig.add_subplot(122)
+        ax2.set_title(str(self.net.name) + " S21, Phase (radians)")
+        ax2.plot(self.net.f,numpy.angle(self.net.s[:,1,0]), label=("S21 Phase, " + str(self.net.name)))
+        ax2.plot(self.resf,numpy.angle(self.S11Min()),'X', markersize=10, label=("Resonance"))
+        ax2.legend()
+        fig.tight_layout
+        matplotlib.pyplot.show(block=True)
+        return
+
+class TxLine:
+    def __init__(self,z0,f,data,datatype,name="GenTxLine",file=None,KnownZl=None,length=None,gamma=None):
+        self.determination = 0
+        self.KnownZl = KnownZl
+        self.length = length
+        self.gamma = length
+        self.dataype = datatype
+        self.NetExt = NetExt(z0,f,data,datatype,name=name)
+        if datatype != None:
+            self.determination += 1
+        if KnownZl != None:
+            self.determination += 1
+        if length != None:
+            self.determination += 1
+        if gamma != None:
+            self.determination += 1
+        return
+
+# TODO: add a filter network
+# TODO: add a way to calculate stub values for impedance matching
+# TODO: add specific kinds of transmission lines, such as coaxial, waveguide, microstrip,
