@@ -98,6 +98,7 @@ class NetExt:
             freq = skrf.Freqeuncy.from_f(f)
             self.net=skrf.Network(z0=z0,frequency=freq,y=data,name=name)
         self.resonantf()
+        self.CrossoverF()
         return
 
     def resonantf(self):
@@ -115,11 +116,13 @@ class NetExt:
         return fmin,self.net.s[numpy.where(self.net.f==fmin),1,0]
 
     def CrossoverF(self):
-        self.fcross = self.net.f[numpy.where(self.net.s[:,0,0] == self.net.s[:,1,0])]
+        diff = numpy.abs(numpy.abs(self.net.s[:,0,0]) - numpy.abs(self.net.s[:,1,0]))
+        self.fcross = self.net.f[numpy.argmin(numpy.abs(diff))]
+        # self.fcross = self.net.f[numpy.where(self.net.s[:,0,0] == self.net.s[:,1,0])]
         return
 
     def S21Cross(self):
-        return self.net.s[numpy.where(self.net.f==self.fcross)]
+        return self.net.s[numpy.where(self.net.f==self.fcross),1,0]
 
     def PlotSmithZNet(self):
         fig = matplotlib.pyplot.figure()
@@ -155,14 +158,14 @@ class NetExt:
         ax1.plot(self.net.f, dB(numpy.abs(self.net.s[:,1,0])),label=("S21 Magnitude, " + str(self.net.name)))
         ax1.plot(self.resf,dB(numpy.abs(self.S21Res())),'X', markersize=10, label=("Resonance"))
         ax1.plot(self.S21Min()[0], dB(numpy.abs(self.S21Min()[1])),'+', markersize=10, label=("Minimum"))
-        ax1.plot(self.fcross, dB(numpy,abs(self.S21Cross())), 'V', markersize=10, label=("Crossover, S11"))
+        ax1.plot(self.fcross, dB(numpy.abs(self.S21Cross())), '*', markersize=10, label=("Crossover, S11"))
         ax1.legend()
         ax2=fig.add_subplot(122)
         ax2.set_title(str(self.net.name) + " S21, Phase (radians)")
         ax2.plot(self.net.f,numpy.angle(self.net.s[:,1,0]), label=("S21 Phase, " + str(self.net.name)))
         ax2.plot(self.resf,numpy.angle(self.S21Res()),'X', markersize=10, label=("Resonance"))
         ax2.plot(self.S21Min()[0], numpy.angle(self.S21Min()[1]),'+', markersize=10, label=("Minimum"))
-        ax2.plot(self.fcross, numpy.angle(self.S21Cross()),'V', markersize=10, label=("Crossover, S11"))
+        ax2.plot(self.fcross, numpy.angle(self.S21Cross()),'*', markersize=10, label=("Crossover, S11"))
         ax2.legend()
         fig.tight_layout
         matplotlib.pyplot.show(block=True)
