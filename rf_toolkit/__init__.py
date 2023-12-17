@@ -107,6 +107,20 @@ class NetExt:
     def S11Min(self):
         return self.net.s[numpy.where(self.net.f==self.resf),0,0]
 
+    def S21Res(self):
+        return self.net.s[numpy.where(self.net.f==self.resf),1,0]
+
+    def S21Min(self):
+        fmin = self.net.f[numpy.argmin(abs(self.net.s[:,1,0]))]
+        return fmin,self.net.s[numpy.where(self.net.f==fmin),1,0]
+
+    def CrossoverF(self):
+        self.fcross = self.net.f[numpy.where(self.net.s[:,0,0] == self.net.s[:,1,0])]
+        return
+
+    def S21Cross(self):
+        return self.net.s[numpy.where(self.net.f==self.fcross)]
+
     def PlotSmithZNet(self):
         fig = matplotlib.pyplot.figure()
         ax1 = fig.add_subplot(111, projection='smith', axes_impedance=self.net.z0[0,0])
@@ -139,12 +153,16 @@ class NetExt:
         ax1 = fig.add_subplot(121)
         ax1.set_title(str(self.net.name) + " S21, Magnitude (dB)")
         ax1.plot(self.net.f, dB(numpy.abs(self.net.s[:,1,0])),label=("S21 Magnitude, " + str(self.net.name)))
-        ax1.plot(self.resf,dB(numpy.abs(self.S11Min())),'X', markersize=10, label=("Resonance"))
+        ax1.plot(self.resf,dB(numpy.abs(self.S21Res())),'X', markersize=10, label=("Resonance"))
+        ax1.plot(self.S21Min()[0], dB(numpy.abs(self.S21Min()[1])),'+', markersize=10, label=("Minimum"))
+        ax1.plot(self.fcross, dB(numpy,abs(self.S21Cross())), 'V', markersize=10, label=("Crossover, S11"))
         ax1.legend()
         ax2=fig.add_subplot(122)
         ax2.set_title(str(self.net.name) + " S21, Phase (radians)")
         ax2.plot(self.net.f,numpy.angle(self.net.s[:,1,0]), label=("S21 Phase, " + str(self.net.name)))
-        ax2.plot(self.resf,numpy.angle(self.S11Min()),'X', markersize=10, label=("Resonance"))
+        ax2.plot(self.resf,numpy.angle(self.S21Res()),'X', markersize=10, label=("Resonance"))
+        ax2.plot(self.S21Min()[0], numpy.angle(self.S21Min()[1]),'+', markersize=10, label=("Minimum"))
+        ax2.plot(self.fcross, numpy.angle(self.S21Cross()),'V', markersize=10, label=("Crossover, S11"))
         ax2.legend()
         fig.tight_layout
         matplotlib.pyplot.show(block=True)
@@ -166,6 +184,27 @@ class TxLine:
             self.determination += 1
         if gamma != None:
             self.determination += 1
+        return
+
+class SpectrumTimeInfo:
+    def __init__(self,data,type,orient):
+        if orient == 1: self.data = data.T
+        else: self.data = data
+        self.type = str(type)
+        self.Maxi()
+        return
+    def Plot(self):
+        fig = matplotlib.pyplot.figure()
+        ax1 = fig.add_subplot(1, 1, 1)
+        ax1.plot(self.data[0],self.data[1],label=("Power"))
+        ax1.plot(self.data[0][numpy.where(self.maxi==self.data[0])],self.data[1][numpy.where(self.maxi==self.data[0])],'X', markersize=10,label=("Maximum"))
+        ax1.set_title(str(self.type))
+        ax1.legend()
+        fig.tight_layout()
+        matplotlib.pyplot.show(block=True)
+        return
+    def Maxi(self):
+        self.maxi = self.data[0][numpy.argmax(self.data[1])]
         return
 
 # TODO: add a filter network
